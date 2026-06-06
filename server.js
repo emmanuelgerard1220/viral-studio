@@ -290,7 +290,9 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
           '-crf 26',
           '-threads 1',
           '-max_muxing_queue_size 1024',
-          '-movflags +faststart'
+          '-movflags +faststart',
+          '-af apad',
+          '-shortest',
         ])
         .output(outputPath)
         .on('start', cmd => console.log('FFmpeg:', cmd))
