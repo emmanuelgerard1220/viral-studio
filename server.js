@@ -86,6 +86,8 @@ IMPORTANT: The video processing system will read your "Edit Structure" section t
 Format the Edit Structure section EXACTLY like this example (timestamps must be in seconds as numbers):
 START: 45
 END: 89
+ZOOM: slow_in
+COLOR: vibrant
 CAPTION_1: 0|This is the hook text|top
 CAPTION_2: 3|Key point here|bottom
 CAPTION_3: 8|Call to action|bottom
@@ -93,6 +95,9 @@ CAPTION_3: 8|Call to action|bottom
 Rules for Edit Structure:
 - START and END are seconds from the original video (integers)
 - Total duration must be ≤ ${guide.maxSec} seconds
+- ZOOM options: slow_in (gradual push-in, energetic), slow_out (pull back, dramatic reveal), none
+- COLOR options: vibrant (punchy/saturated — TikTok default), warm (golden tones — Instagram default), moody (dark contrasty), cool (blue-toned), cinematic (desaturated film look), natural (no grade)
+- Choose ZOOM and COLOR that match the platform aesthetic and content vibe
 - CAPTION lines: format is OFFSET_SECONDS|TEXT|POSITION(top or bottom)
 - Include 3-6 captions max
 - Keep caption text under 8 words each
@@ -160,6 +165,12 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
   // Clamp duration to platform max
   const duration = Math.min(endTime - startTime, spec.maxDuration);
 
+  // Parse zoom and color grade
+  const zoomMatch  = strategy.match(/^ZOOM:\s*(\w+)/m);
+  const colorMatch = strategy.match(/^COLOR:\s*(\w+)/m);
+  const zoomType   = zoomMatch  ? zoomMatch[1].toLowerCase()  : 'none';
+  const colorStyle = colorMatch ? colorMatch[1].toLowerCase() : 'natural';
+
   // Parse captions: CAPTION_N: offset|text|position
   const captionRegex = /^CAPTION_\d+:\s*(\d+)\|(.+?)\|(top|bottom)/gm;
   let captionMatch;
@@ -187,6 +198,27 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
         `scale=720:1280:force_original_aspect_ratio=increase`,
         `crop=720:1280`
       );
+
+      // Zoom effect — zoompan operates on the already-scaled 720x1280 frame
+      if (zoomType === 'slow_in') {
+        filterParts.push(
+          `zoompan=z='min(1+0.2*t/${duration},1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280`
+        );
+      } else if (zoomType === 'slow_out') {
+        filterParts.push(
+          `zoompan=z='max(1.2-0.2*t/${duration},1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280`
+        );
+      }
+
+      // Color grade
+      const COLOR_GRADES = {
+        vibrant:   ['eq=saturation=1.4:contrast=1.15:brightness=0.03'],
+        warm:      ['eq=saturation=1.2:contrast=1.1', 'colorbalance=rs=0.08:gs=0.02:bs=-0.08'],
+        moody:     ['eq=saturation=0.8:contrast=1.25:brightness=-0.05'],
+        cool:      ['eq=saturation=1.1:contrast=1.1', 'colorbalance=rs=-0.08:gs=0.02:bs=0.12'],
+        cinematic: ['eq=saturation=0.85:contrast=1.3:brightness=-0.03', 'colorbalance=rs=0.05:gs=0:bs=-0.08'],
+      };
+      if (COLOR_GRADES[colorStyle]) filterParts.push(...COLOR_GRADES[colorStyle]);
 
       // Font file — fonts-dejavu is installed in the Dockerfile
       const fontFile = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';

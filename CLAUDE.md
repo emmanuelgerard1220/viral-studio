@@ -26,6 +26,8 @@ with regex. If you change the format in the prompt, update the parser too, and v
 ```
 START: 45                       <- cut start, seconds (integer)
 END: 89                         <- cut end, seconds (integer)
+ZOOM: slow_in                   <- slow_in | slow_out | none
+COLOR: vibrant                  <- vibrant | warm | moody | cool | cinematic | natural
 CAPTION_1: 0|Hook text here|top <- OFFSET_SECONDS|TEXT|POSITION(top|bottom)
 CAPTION_2: 4|Next caption|bottom
 ```
@@ -34,8 +36,14 @@ CAPTION_2: 4|Next caption|bottom
   (see `renderCardBody` in index.html).
 
 ## FFmpeg pipeline (in server.js /api/process)
+Filter order: scale+crop → zoom → color grade → drawtext captions.
 - Crop to 9:16: `scale=720:1280:force_original_aspect_ratio=increase`, then `crop=720:1280`.
   Output is 720x1280 (NOT 1080x1920) to stay within Railway memory limits.
+- Zoom: `zoompan` filter. `slow_in` ramps from 1.0→1.2× over the clip; `slow_out` from 1.2→1.0×.
+  Applied on the already-scaled 720x1280 frame. `zoompan` is CPU-intensive; if clips time out,
+  disable zoom or increase Railway instance memory.
+- Color grade: `eq` (saturation/contrast/brightness) + optional `colorbalance`. Five presets:
+  vibrant, warm, moody, cool, cinematic. `natural` skips the grade entirely.
 - Captions: one `drawtext` filter per wrapped line. Font is DejaVuSans-Bold.
 - Encoding: `libx264`, `-preset ultrafast`, `-crf 26`, `-threads 1`. These low settings
   are deliberate — see Gotchas.

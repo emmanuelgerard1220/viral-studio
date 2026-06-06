@@ -376,6 +376,8 @@ function renderCardBody(id, text) {
   const display = text
     .replace(/^START:.*$/m, '')
     .replace(/^END:.*$/m, '')
+    .replace(/^ZOOM:.*$/m, '')
+    .replace(/^COLOR:.*$/m, '')
     .replace(/^CAPTION_\d+:.*$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
