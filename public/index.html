@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viral Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --yt:#FF0000;--bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;
+  --border:rgba(255,255,255,0.08);--text:#f0f0f0;--muted:#888;--accent:#e8ff47;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;font-size:15px;line-height:1.6}
+header{padding:2rem 2.5rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:1rem}
+header h1{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:2px;color:var(--accent);line-height:1}
+header span{font-size:13px;color:var(--muted)}
+.main{max-width:1100px;margin:0 auto;padding:2rem 2.5rem 4rem}
+
+/* API key bar */
+.apikey-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.apikey-bar label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap}
+.apikey-bar input{flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.apikey-bar input:focus{border-color:var(--accent)}
+.apikey-bar .hint{font-size:12px;color:var(--muted)}
+.apikey-bar .hint a{color:var(--accent);text-decoration:none}
+
+/* Upload */
+.upload-zone{border:1.5px dashed var(--border);border-radius:16px;padding:2.5rem 2rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden;background:var(--surface)}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:rgba(232,255,71,.03)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:2.5rem;margin-bottom:.75rem;display:block;opacity:.4}
+.upload-zone h2{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:1px;color:var(--text);margin-bottom:.4rem}
+.upload-zone p{font-size:13px;color:var(--muted)}
+.upload-zone.has-file{border-color:var(--accent);border-style:solid}
+#video-preview{display:none;width:100%;max-height:200px;border-radius:10px;object-fit:contain;margin-bottom:1rem;background:#000}
+#video-preview.visible{display:block}
+
+/* Form */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.25rem}
+.field label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:.4rem}
+.field input,.field textarea,.field select{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.7rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;resize:none;transition:border-color .2s}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.field textarea{min-height:90px}
+.field select option{background:#1e1e1e}
+
+/* Button */
+.generate-btn{display:flex;align-items:center;gap:.6rem;background:var(--accent);color:#000;border:none;border-radius:10px;padding:.85rem 1.75rem;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:1.5px;cursor:pointer;transition:transform .15s;margin-top:1.25rem}
+.generate-btn:hover{transform:translateY(-1px)}
+.generate-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.generate-btn .spinner{width:16px;height:16px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;display:none}
+.generate-btn.loading .spinner{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Results */
+.results{margin-top:3rem;display:none}
+.results.visible{display:block}
+.results-header{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:2px;color:var(--text);margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem}
+.results-header::after{content:'';flex:1;height:1px;background:var(--border)}
+.platforms-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
+@media(max-width:768px){.platforms-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}header,.main{padding:1.5rem}}
+
+/* Cards */
+.platform-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.card-header{padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;border-bottom:1px solid var(--border)}
+.platform-logo{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.yt-logo{background:var(--yt);color:white;font-family:'Bebas Neue',sans-serif;font-size:10px}
+.tt-logo{background:#010101;color:white;border:1px solid #333;font-size:11px}
+.ig-logo{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:white;font-size:14px}
+.platform-name{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:1px}
+.platform-sub{font-size:11px;color:var(--muted)}
+.card-body{padding:1.25rem;flex:1;font-size:13px;line-height:1.65;color:#ccc;overflow-wrap:break-word}
+.loading-text{color:var(--muted);font-style:italic;display:flex;align-items:center;gap:.5rem}
+.loading-text::before{content:'';width:12px;height:12px;border:1.5px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.section-tag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:5px;margin-bottom:.4rem;margin-top:.9rem;background:rgba(232,255,71,.12);color:var(--accent)}
+.section-tag:first-child{margin-top:0}
+.strategy-text h3{font-size:13px;font-weight:600;color:var(--text);margin:1rem 0 .3rem}
+.strategy-text p{margin-bottom:.4rem}
+.strategy-text ul{padding-left:1.1rem;margin-bottom:.4rem}
+.strategy-text li{margin-bottom:.15rem}
+
+/* Actions */
+.card-actions{padding:.75rem 1.25rem 1.25rem;display:flex;flex-direction:column;gap:.5rem}
+.copy-btn{background:transparent;border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:border-color .2s,color .2s;text-align:left}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.process-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.55rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:border-color .2s;text-align:left;display:flex;align-items:center;gap:.5rem}
+.process-btn:hover:not(:disabled){border-color:var(--accent);background:rgba(232,255,71,.06)}
+.process-btn:disabled{opacity:.35;cursor:not-allowed}
+.process-btn .mini-spinner{width:12px;height:12px;border:1.5px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0}
+.process-btn.processing .mini-spinner{display:block}
+.prog-wrap{background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;display:none}
+.prog-bar{height:100%;background:var(--accent);width:0%;transition:width .3s}
+.status-txt{font-size:11px;color:var(--muted);min-height:1rem}
+.download-link{display:none;background:rgba(232,255,71,.1);border:1px solid rgba(232,255,71,.3);border-radius:8px;padding:.55rem 1rem;color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;text-align:center}
+.download-link.visible{display:block}
+
+.error-msg{background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.3);border-radius:10px;padding:1rem 1.25rem;font-size:13px;color:#ff8080;margin-top:1rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>VIRAL STUDIO</h1>
+  <span>AI strategy + real video editing</span>
+</header>
+<div class="main">
+
+  <div class="apikey-bar">
+    <label>Anthropic API Key</label>
+    <input id="api-key" type="password" placeholder="sk-ant-api03-...">
+    <span class="hint">Get yours at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a></span>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="video-input" accept="video/*">
+    <video id="video-preview" controls playsinline muted></video>
+    <span class="upload-icon" id="upload-icon">🎬</span>
+    <h2 id="upload-title">Drop your video here</h2>
+    <p id="upload-sub">MP4, MOV, WebM up to 500MB</p>
+  </div>
+
+  <div class="form-row">
+    <div class="field">
+      <label>Video description</label>
+      <textarea id="description" placeholder="What happens in this video? E.g. 'A chef making carbonara from scratch showing a creamy egg emulsion technique'"></textarea>
+    </div>
+    <div class="field">
+      <label>Content niche / topic</label>
+      <input type="text" id="niche" placeholder="E.g. food, fitness, travel, comedy, tech...">
+      <div style="height:.6rem"></div>
+      <label>Target audience</label>
+      <input type="text" id="audience" placeholder="E.g. young adults 18–30, gym beginners...">
+    </div>
+  </div>
+  <div class="form-row" style="margin-top:.75rem">
+    <div class="field">
+      <label>Original video length</label>
+      <input type="text" id="duration" placeholder="E.g. 4 minutes 30 seconds">
+    </div>
+    <div class="field">
+      <label>Tone / vibe</label>
+      <select id="tone">
+        <option value="">Select...</option>
+        <option>Entertaining &amp; funny</option>
+        <option>Educational &amp; informative</option>
+        <option>Emotional &amp; inspiring</option>
+        <option>Aesthetic &amp; satisfying</option>
+        <option>Raw &amp; authentic</option>
+        <option>High energy &amp; hype</option>
+        <option>Chill &amp; relaxed</option>
+        <option>Controversial &amp; opinionated</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="generate-btn" id="gen-btn" onclick="generate()">
+    <div class="spinner"></div>
+    <span class="btn-label">⚡ GENERATE 3 VIRAL VERSIONS</span>
+  </button>
+
+  <div id="error-container"></div>
+
+  <div class="results" id="results">
+    <div class="results-header">YOUR PLATFORM STRATEGIES</div>
+    <div class="platforms-grid">
+
+      <div class="platform-card" id="card-yt">
+        <div class="card-header">
+          <div class="platform-logo yt-logo">YT</div>
+          <div>
+            <div class="platform-name" style="color:var(--yt)">YouTube</div>
+            <div class="platform-sub">Shorts · 9:16 · ≤59s</div>
+          </div>
+        </div>
+        <div class="card-body" id="yt-body"><div class="loading-text">Crafting strategy...</div></div>
+        <div class="card-actions">
+          <button class="copy-btn" onclick="copyCard('yt')">📋 Copy strategy</button>
+          <button class="process-btn" id="proc-yt" onclick="processVideo('youtube','yt')" disabled>
+            <div class="mini-spinner"></div><span id="proc-yt-label">🎬 Export edited video</span>
+          </button>
+          <div class="prog-wrap" id="prog-wrap-yt"><div class="prog-bar" id="prog-yt"></div></div>
+          <div class="status-txt" id="status-yt"></div>
+          <a class="download-link" id="dl-yt" href="#" download>⬇ Download YouTube Short</a>
+        </div>
+      </div>
+
+      <div class="platform-card" id="card-tt">
+        <div class="card-header">
+          <div class="platform-logo tt-logo">TT</div>
+          <div>
+            <div class="platform-name" style="color:#69C9D0">TikTok</div>
+            <div class="platform-sub">FYP · 9:16 · ≤59s</div>
+          </div>
+        </div>
+        <div class="card-body" id="tt-body"><div class="loading-text">Crafting strategy...</div></div>
+        <div class="card-actions">
+          <button class="copy-btn" onclick="copyCard('tt')">📋 Copy strategy</button>
+          <button class="process-btn" id="proc-tt" onclick="processVideo('tiktok','tt')" disabled>
+            <div class="mini-spinner"></div><span id="proc-tt-label">🎬 Export edited video</span>
+          </button>
+          <div class="prog-wrap" id="prog-wrap-tt"><div class="prog-bar" id="prog-tt"></div></div>
+          <div class="status-txt" id="status-tt"></div>
+          <a class="download-link" id="dl-tt" href="#" download>⬇ Download TikTok Video</a>
+        </div>
+      </div>
+
+      <div class="platform-card" id="card-ig">
+        <div class="card-header">
+          <div class="platform-logo ig-logo">▶</div>
+          <div>
+            <div class="platform-name" style="color:#E1306C">Instagram</div>
+            <div class="platform-sub">Reels · 9:16 · ≤29s</div>
+          </div>
+        </div>
+        <div class="card-body" id="ig-body"><div class="loading-text">Crafting strategy...</div></div>
+        <div class="card-actions">
+          <button class="copy-btn" onclick="copyCard('ig')">📋 Copy strategy</button>
+          <button class="process-btn" id="proc-ig" onclick="processVideo('instagram','ig')" disabled>
+            <div class="mini-spinner"></div><span id="proc-ig-label">🎬 Export edited video</span>
+          </button>
+          <div class="prog-wrap" id="prog-wrap-ig"><div class="prog-bar" id="prog-ig"></div></div>
+          <div class="status-txt" id="status-ig"></div>
+          <a class="download-link" id="dl-ig" href="#" download>⬇ Download Instagram Reel</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const cardData = { yt:'', tt:'', ig:'' };
+let videoFile = null;
+
+// ── Upload ───────────────────────────────────────────────────
+document.getElementById('video-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  videoFile = file;
+  const preview = document.getElementById('video-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.classList.add('visible');
+  document.getElementById('upload-zone').classList.add('has-file');
+  document.getElementById('upload-icon').style.display = 'none';
+  document.getElementById('upload-title').textContent = file.name;
+  document.getElementById('upload-sub').textContent = (file.size/1024/1024).toFixed(1) + ' MB';
+  updateProcessButtons();
+});
+
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('video/')) {
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('video-input').files = dt.files;
+    document.getElementById('video-input').dispatchEvent(new Event('change'));
+  }
+});
+
+function updateProcessButtons() {
+  ['yt','tt','ig'].forEach(id => {
+    document.getElementById('proc-'+id).disabled = !(cardData[id] && videoFile);
+  });
+}
+
+// ── Generate strategies ───────────────────────────────────────
+function showError(msg) { document.getElementById('error-container').innerHTML = '<div class="error-msg">⚠️ ' + msg + '</div>'; }
+function clearError()   { document.getElementById('error-container').innerHTML = ''; }
+
+async function generate() {
+  clearError();
+  const description = document.getElementById('description').value.trim();
+  const apiKey      = document.getElementById('api-key').value.trim();
+  if (!description) { showError('Please add a video description.'); return; }
+  if (!apiKey)      { showError('Please enter your Anthropic API key.'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.classList.add('loading');
+  btn.querySelector('.btn-label').textContent = 'GENERATING...';
+
+  document.getElementById('results').classList.add('visible');
+  ['yt','tt','ig'].forEach(id => {
+    document.getElementById(id+'-body').innerHTML = '<div class="loading-text">Crafting strategy...</div>';
+    document.getElementById('proc-'+id).disabled = true;
+    document.getElementById('dl-'+id).classList.remove('visible');
+    cardData[id] = '';
+  });
+
+  try {
+    const res = await fetch('/api/strategy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description,
+        niche:    document.getElementById('niche').value.trim(),
+        audience: document.getElementById('audience').value.trim(),
+        duration: document.getElementById('duration').value.trim(),
+        tone:     document.getElementById('tone').value,
+        apiKey
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    const map = { youtube:'yt', tiktok:'tt', instagram:'ig' };
+    for (const [platform, id] of Object.entries(map)) {
+      cardData[id] = data.strategies[platform] || '';
+      renderCardBody(id, cardData[id]);
+    }
+    updateProcessButtons();
+  } catch(err) {
+    showError('Failed: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.classList.remove('loading');
+    btn.querySelector('.btn-label').textContent = '⚡ REGENERATE';
+    document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+}
+
+// ── Process video ─────────────────────────────────────────────
+async function processVideo(platform, id) {
+  if (!videoFile)   { alert('Upload a video first.'); return; }
+  if (!cardData[id]){ alert('Generate strategy first.'); return; }
+
+  const btn  = document.getElementById('proc-'+id);
+  const wrap = document.getElementById('prog-wrap-'+id);
+  const bar  = document.getElementById('prog-'+id);
+  const stat = document.getElementById('status-'+id);
+  const dl   = document.getElementById('dl-'+id);
+
+  btn.disabled = true;
+  btn.classList.add('processing');
+  wrap.style.display = 'block';
+  bar.style.width = '5%';
+  stat.textContent = 'Uploading video…';
+  dl.classList.remove('visible');
+
+  try {
+    const formData = new FormData();
+    formData.append('video', videoFile);
+    formData.append('platform', platform);
+    formData.append('strategy', cardData[id]);
+
+    bar.style.width = '20%';
+    stat.textContent = 'Processing on server (FFmpeg)…';
+
+    const res = await fetch('/api/process', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Server error');
+
+    bar.style.width = '100%';
+    stat.textContent = '✅ Done! Click below to download.';
+
+    dl.href = data.url;
+    dl.download = data.filename;
+    dl.classList.add('visible');
+    document.getElementById('proc-'+id+'-label').textContent = '🎬 Re-export';
+
+  } catch(err) {
+    stat.textContent = '⚠️ ' + err.message;
+    bar.style.width = '0%';
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('processing');
+    updateProcessButtons();
+  }
+}
+
+// ── Render strategy text ──────────────────────────────────────
+function renderCardBody(id, text) {
+  // Strip the edit-instruction block before showing to user
+  const display = text
+    .replace(/^START:.*$/m, '')
+    .replace(/^END:.*$/m, '')
+    .replace(/^CAPTION_\d+:.*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const el = document.getElementById(id+'-body');
+  const div = document.createElement('div');
+  div.className = 'strategy-text';
+  const lines = display.split('\n');
+  let html='', inList=false, inPara=false;
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) {
+      if (inList){html+='</ul>';inList=false;}
+      if (inPara){html+='</p>';inPara=false;}
+      continue;
+    }
+    if (t.startsWith('### ')) {
+      if (inList){html+='</ul>';inList=false;}
+      if (inPara){html+='</p>';inPara=false;}
+      html += '<div class="section-tag">'+t.slice(4)+'</div>';
+    } else if (/^#{1,2} /.test(t)) {
+      if (inList){html+='</ul>';inList=false;}
+      if (inPara){html+='</p>';inPara=false;}
+      html += '<h3>'+t.replace(/^#+\s*/,'')+'</h3>';
+    } else if (t.startsWith('- ')||t.startsWith('* ')) {
+      if (inPara){html+='</p>';inPara=false;}
+      if (!inList){html+='<ul>';inList=true;}
+      html += '<li>'+t.slice(2).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')+'</li>';
+    } else {
+      if (inList){html+='</ul>';inList=false;}
+      if (!inPara){html+='<p>';inPara=true;}else html+=' ';
+      html += t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    }
+  }
+  if (inList) html+='</ul>';
+  if (inPara) html+='</p>';
+  div.innerHTML = html;
+  el.innerHTML='';
+  el.appendChild(div);
+}
+
+function copyCard(id) {
+  if (!cardData[id]) return;
+  navigator.clipboard.writeText(cardData[id]).then(() => {
+    const btn = document.querySelector('#card-'+id+' .copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy strategy', 2000);
+  });
+}
+</script>
+</body>
+</html>
