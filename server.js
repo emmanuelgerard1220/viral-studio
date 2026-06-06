@@ -184,8 +184,8 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
       // crop=ih*9/16:ih  picks a 9:16-wide column when source is wider;
       // force_original_aspect_ratio handles both orientations cleanly via scale+crop.
       filterParts.push(
-        `scale=1080:1920:force_original_aspect_ratio=increase`,
-        `crop=1080:1920`
+        `scale=720:1280:force_original_aspect_ratio=increase`,
+        `crop=720:1280`
       );
 
       // Font file — fonts-dejavu is installed in the Dockerfile
@@ -217,7 +217,13 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
         .audioCodec('aac')
         .audioBitrate('128k')
         .videoCodec('libx264')
-        .outputOptions(['-preset fast', '-crf 23', '-movflags +faststart'])
+        .outputOptions([
+          '-preset ultrafast',
+          '-crf 26',
+          '-threads 1',
+          '-max_muxing_queue_size 1024',
+          '-movflags +faststart'
+        ])
         .output(outputPath)
         .on('start', cmd => console.log('FFmpeg:', cmd))
         .on('stderr', line => { ffmpegLog += line + '\n'; })
