@@ -202,11 +202,11 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
       // Zoom effect — zoompan operates on the already-scaled 720x1280 frame
       if (zoomType === 'slow_in') {
         filterParts.push(
-          `zoompan=z='min(1+0.2*t/${duration},1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280`
+          `zoompan=z='min(1+0.2*t/${duration},1.2)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=30`
         );
       } else if (zoomType === 'slow_out') {
         filterParts.push(
-          `zoompan=z='max(1.2-0.2*t/${duration},1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280`
+          `zoompan=z='max(1.2-0.2*t/${duration},1)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=30`
         );
       }
 
