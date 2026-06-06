@@ -190,21 +190,57 @@ app.post('/api/process', upload.single('video'), async (req, res) => {
 
       // Font file — fonts-dejavu is installed in the Dockerfile
       const fontFile = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+      const fontSize = 52;
+      const lineHeight = 68; // px between stacked lines
 
-      // Add caption drawtext filters
-      captions.forEach(cap => {
-        const endOffset = cap.offset + 3; // show each caption for 3 seconds
-        const yPos = cap.position === 'top' ? '160' : 'h-220';
-        // Escape for FFmpeg drawtext: backslash, colon, single quote, percent
-        const safeText = cap.text
+      // Wrap a caption into lines of at most maxChars characters (word-aware)
+      function wrapText(text, maxChars) {
+        const words = text.split(/\s+/);
+        const lines = [];
+        let current = '';
+        for (const word of words) {
+          if ((current + ' ' + word).trim().length <= maxChars) {
+            current = (current + ' ' + word).trim();
+          } else {
+            if (current) lines.push(current);
+            current = word;
+          }
+        }
+        if (current) lines.push(current);
+        return lines;
+      }
+
+      function escapeDrawtext(s) {
+        return s
           .replace(/\\/g, '\\\\')
           .replace(/'/g, '')
           .replace(/:/g, '\\:')
           .replace(/%/g, '\\%');
+      }
 
-        filterParts.push(
-          `drawtext=fontfile='${fontFile}':text='${safeText}':fontsize=58:fontcolor=white:borderw=4:bordercolor=black:x=(w-text_w)/2:y=${yPos}:enable='between(t\\,${cap.offset}\\,${endOffset})'`
-        );
+      // At 720px wide with fontsize 52, ~16 chars fit per line comfortably
+      const MAX_CHARS_PER_LINE = 16;
+
+      // Add caption drawtext filters (one per wrapped line)
+      captions.forEach(cap => {
+        const endOffset = cap.offset + 3; // show each caption for 3 seconds
+        const lines = wrapText(cap.text, MAX_CHARS_PER_LINE);
+        const blockHeight = lines.length * lineHeight;
+
+        lines.forEach((line, idx) => {
+          const safeText = escapeDrawtext(line);
+          // Compute y for each line so the block is anchored at top or bottom
+          let yExpr;
+          if (cap.position === 'top') {
+            yExpr = `${160 + idx * lineHeight}`;
+          } else {
+            // bottom: anchor whole block above the lower edge
+            yExpr = `h-${blockHeight + 160 - idx * lineHeight}`;
+          }
+          filterParts.push(
+            `drawtext=fontfile='${fontFile}':text='${safeText}':fontsize=${fontSize}:fontcolor=white:borderw=4:bordercolor=black:x=(w-text_w)/2:y=${yExpr}:enable='between(t\\,${cap.offset}\\,${endOffset})'`
+          );
+        });
       });
 
       const vf = filterParts.join(',');
